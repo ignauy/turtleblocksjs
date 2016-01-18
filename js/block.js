@@ -804,7 +804,7 @@ function Block(protoblock, blocks, overrideName) {
     }
 }
 
-
+/*
 function $() {
     var elements = new Array();
 
@@ -818,6 +818,7 @@ function $() {
     }
     return elements;
 }
+*/
 
 
 function positionText(myBlock, scale) {
