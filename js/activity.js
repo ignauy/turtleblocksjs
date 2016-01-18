@@ -118,8 +118,6 @@ define(function (require) {
         // The file chooser for all files.
         var allFilesChooser = docById('myOpenAll')
 
-        // Are we running off of a server?
-        var server = true;
         var scale = 1;
         var stage;
         var turtles;
@@ -571,14 +569,7 @@ define(function (require) {
             var URL = window.location.href;
             var projectName = null;
             var runProjectOnLoad = false;
-            try {
-                httpGet(null);
-                console.log('running from server or the user can access to examples.');
-                server = true;
-            } catch (e) {
-                console.log('running from filesystem or the connection isnt secure');
-                server = false;
-            }
+            server = true;
 
             setupAndroidToolbar();
 

@@ -15,11 +15,6 @@ EMPTYIMAGE = 'data:image/svg+xml;base64,' + btoa('<svg \
               xmlns="http://www.w3.org/2000/svg" width="320" height="240" \
               viewBox="0 0 320 240"></svg>')
 
-window.server = '/server/';
-jQuery.ajax('/server/').error(function () {
-    server = 'https://turtle.sugarlabs.org/server/';
-});
-
 var LOCAL_PROJECT_TEMPLATE = '\
 <li data=\'{data}\' title="{title}" current="{current}"> \
     <img class="thumbnail" src="{img}" /> \
@@ -33,7 +28,7 @@ var LOCAL_PROJECT_TEMPLATE = '\
 </li>'
 
 var GLOBAL_PROJECT_TEMPLATE = '\
-<li url="{url}" title="{title}"> \
+<li url="{url}" title="{title}" couchkey="{couchkey}"> \
     <img class="thumbnail" src="{img}" /> \
     <div class="options"> \
         <span>{title}</span><br/> \
@@ -41,22 +36,17 @@ var GLOBAL_PROJECT_TEMPLATE = '\
     </div> \
 </li>';
 
+$.couch.urlPrefix = "http://localhost:5985";
 
 function PlanetModel(controller) {
     this.controller = controller;
     this.localProjects = [];
     this.globalProjects = [];
     this.localChanged = false;
-    this.globalImagesCache = {};
     this.updated = function () {};
     this.stop = false;
     var me = this;
-    if (sugarizerCompatibility.isInsideSugarizer()) {
-        server = 'https://turtle.sugarlabs.org/server/';
-        storage = sugarizerCompatibility.data;
-    } else {
-        storage = localStorage;
-    }
+
     this.start = function (cb) {
         me.updated = cb;
         me.stop = false;
@@ -66,58 +56,34 @@ function PlanetModel(controller) {
         this.downloadWorldWideProjects();
     }
 
-    this.downloadWorldWideProjects = function () {
-        jQuery.ajax({
-            url: server,
-            headers: {
-                'x-api-key' : APIKEY
+    this.downloadWorldWideProjects = function() {
+        me.globalProjects = [];
+
+        $.couch.db("nickdb").allDocs({
+            success: function(projects) {
+                projects_id = [];
+                row_keys = {};
+                for (var row_id in projects["rows"]) {
+                    row_key = projects["rows"][row_id]["key"];
+                    $.couch.db("nickdb").openDoc(row_key, {
+                        success: function(data) {
+                            var project = data["project"]
+                            project_name = project[0];
+                            project_data = project[1];
+                            project_img = project[2];
+
+                            me.globalProjects.push({
+                                couchkey: data["_id"],
+                                title: project_name,
+                                img: project_img
+                            });
+
+                            me.updated();
+                        }
+                    });
+                };
             }
-        }).done(function (l) {
-            me.globalProjects = [];
-            me.stop = false;
-            var todo = [];
-            l.forEach(function (name, i) {
-                if (name.indexOf('.b64') !== -1) 	{
-                    todo.push(name);
-                }
-            });
-            me.getImages(todo);
         });
-    }
-
-    this.getImages = function (todo) {
-        if (me.stop === true) {
-            return;
-        }
-
-        var image = todo.pop();
-        if (image === undefined) {
-            return;
-        }
-        var name = image.replace('.b64', '');
-
-        if (me.globalImagesCache[image] !== undefined) {
-            me.globalProjects.push({title: name,
-                                    img: me.globalImagesCache[image]});
-            me.updated();
-            me.getImages(todo);
-        } else {
-            jQuery.ajax({
-  	            url: server + image,
-                headers: {
-                    'x-api-key' : '3tgTzMXbbw6xEKX7'
-                },
-                dataType: 'text'
-            }).done(function (d) {
-                if(!validateImageData(d)){
-                    d = EMPTYIMAGE;
-                }
-                me.globalImagesCache[image] = d;
-                me.globalProjects.push({title: name, img: d, url: image});
-                me.updated();
-                me.getImages(todo);
-            });
-      }
     }
 
     this.redoLocalStorageData = function () {
@@ -206,35 +172,47 @@ function PlanetModel(controller) {
         me.stop = true;
     }
 
-    this.prepLoadingProject = function (name) {
-        storage.currentProject = name;
+    this.prepLoadingProject = function (name, project_id) {
+        if (project_id) {
+          storage.currentProject = project_id;
+        }
+        else {
+          storage.currentProject = name;
+        }
 
         var l = JSON.parse(storage.allProjects);
         l.push(name);
         storage.allProjects = JSON.stringify(l);
     }
 
-    this.load = function (name) {
-        me.prepLoadingProject(name);
-        me.controller.sendAllToTrash(false, false);
+    this.load = function(key) {
+        $.couch.db("nickdb").openDoc(key, {
+            success: function(data) {
+                project = data["project"]
+                project_name = project[0];
+                project_data = project[1];
 
-        jQuery.ajax({
-            url: server + name + ".tb",
-            headers: {
-                'x-api-key' : '3tgTzMXbbw6xEKX7'
-            },
-            dataType: 'text'
-        }).done(function (d) {
-            me.controller.loadRawProject(d);
-            me.stop = true;
+                me.controller.sendAllToTrash(false, false);
+                me.prepLoadingProject(project_name, data["_id"]);
+                me.controller.loadRawProject(project_data);
+                me.stop = true;
+            }
         });
     }
 
-    this.publish = function (name, data, image) {
+    this.publish = function(name, data, image) {
         name = name.replace(/['!"#$%&\\'()\*+,\-\.\/:;<=>?@\[\\\]\^`{|}~']/g,
-                            '').replace(/ /g, '_');
-        httpPost(name + '.tb', data);
-        httpPost(name + '.b64', image);
+            '').replace(/ /g, '_');
+
+        var project = {
+            project: [name, data, image]
+        };
+        $.couch.db("nickdb").saveDoc(project, {
+            success: function(status) {
+                console.log(status);
+            }
+        });
+
         me.downloadWorldWideProjects();
     }
 }
@@ -307,7 +285,7 @@ function PlanetView(model, controller) {
             document.querySelector('#loading-image-container')
                     .style.display = '';
 
-            me.model.load(ele.attributes.title.value);
+            me.model.load(ele.attributes.couchkey.value);
             me.controller.hide();
         }
     }
@@ -337,7 +315,7 @@ function PlanetView(model, controller) {
                 me.controller.hide();
                 return;
             }
-            
+
             me.model.open(ele.attributes.title.value,
                           ele.attributes.data.value);
             me.controller.hide();
@@ -378,10 +356,6 @@ function SamplesViewer(canvas, stage, refreshCanvas, load, loadRawProject, trash
     this.model = new PlanetModel(this);
     this.view = new PlanetView(this.model, this);
 
-    this.setServer = function(server) {
-        this.server = server;
-    }
-
     this.hide = function() {
         document.querySelector('.planet').style.display = 'none';
         document.querySelector('body').classList.remove('samples-shown');
@@ -410,7 +384,7 @@ function validateImageData(d) {
     if(d === undefined) {
         return false;
     }
-    
+
     if(d.indexOf('data:image') !== 0){
         return false;
     }
