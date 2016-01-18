@@ -8,15 +8,10 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, 51 Franklin Street, Suite 500 Boston, MA 02110-1335 USA
 //
-APIKEY = '3tgTzMXbbw6xEKX7';
+
 EMPTYIMAGE = 'data:image/svg+xml;base64,' + btoa('<svg \
               xmlns="http://www.w3.org/2000/svg" width="320" height="240" \
               viewBox="0 0 320 240"></svg>')
-
-window.server = '/server/';
-jQuery.ajax('/server/').error(function() {
-    server = 'https://turtle.sugarlabs.org/server/';
-});
 
 var LOCAL_PROJECT_TEMPLATE = '\
 <li data=\'{data}\' title="{title}" current="{current}"> \
@@ -39,6 +34,7 @@ var GLOBAL_PROJECT_TEMPLATE = '\
     </div> \
 </li>';
 
+$.couch.urlPrefix = "http://localhost:5985";
 
 function PlanetModel(controller) {
     this.controller = controller;
@@ -49,12 +45,7 @@ function PlanetModel(controller) {
     this.updated = function() {};
     this.stop = false;
     var me = this;
-    if (sugarizerCompatibility.isInsideSugarizer()) {
-        server = 'https://turtle.sugarlabs.org/server/';
-        storage = sugarizerCompatibility.data;
-    } else {
-        storage = localStorage;
-    }
+    storage = localStorage;
     this.start = function(cb) {
         me.updated = cb;
         me.stop = false;
@@ -65,64 +56,35 @@ function PlanetModel(controller) {
     }
 
     this.downloadWorldWideProjects = function() {
-        jQuery.ajax({
-            url: server,
-            headers: {
-                'x-api-key': APIKEY
-            }
-        }).done(function(l) {
-            me.globalProjects = [];
-            me.stop = false;
-            var todo = [];
-            l.forEach(function(name, i) {
-                if (name.indexOf('.b64') !== -1) {
-                    todo.push(name);
+        me.globalProjects = [];
+        $.couch.db("nickdb").allDocs({
+            success: function(projects) {
+                projects_id = [];
+                row_keys = {};
+                for (var row_id in projects["rows"]) {
+                    row_key = projects["rows"][row_id]["key"];
+                    $.couch.db("nickdb").openDoc(row_key, {
+                        success: function(data) {
+                            var project = data["project"]
+                            project_name = project[0];
+                            project_data = project[1];
+                            project_img = project[2];
+                            me.globalImagesCache[project_name] = project_img;
+
+                            me.globalProjects.push({
+                                couchkey: data["_id"],
+                                title: project_name,
+                                img: project_img
+                            });
+                            
+                            me.updated();
+                        }
+                    });
                 }
-            });
-            me.getImages(todo);
+            }
         });
     }
-
-    this.getImages = function(todo) {
-        if (me.stop === true) {
-            return;
-        }
-
-        var image = todo.pop();
-        if (image === undefined) {
-            return;
-        }
-        var name = image.replace('.b64', '');
-
-        if (me.globalImagesCache[image] !== undefined) {
-            me.globalProjects.push({
-                title: name,
-                img: me.globalImagesCache[image]
-            });
-            me.updated();
-            me.getImages(todo);
-        } else {
-            jQuery.ajax({
-                url: server + image,
-                headers: {
-                    'x-api-key': '3tgTzMXbbw6xEKX7'
-                },
-                dataType: 'text'
-            }).done(function(d) {
-                if (!validateImageData(d)) {
-                    d = EMPTYIMAGE;
-                }
-                me.globalImagesCache[image] = d;
-                me.globalProjects.push({
-                    title: name,
-                    img: d,
-                    url: image
-                });
-                me.updated();
-                me.getImages(todo);
-            });
-        }
-    }
+                                     
 
     this.redoLocalStorageData = function() {
         this.localProjects = [];
