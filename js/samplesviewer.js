@@ -26,7 +26,7 @@ var LOCAL_PROJECT_TEMPLATE = '\
 </li>'
 
 var GLOBAL_PROJECT_TEMPLATE = '\
-<li url="{url}" title="{title}"> \
+<li url="{url}" title="{title}" couchkey="{couchkey}"> \
     <img class="thumbnail" src="{img}" /> \
     <div class="options"> \
         <span>{title}</span><br/> \
@@ -180,19 +180,18 @@ function PlanetModel(controller) {
         storage.allProjects = JSON.stringify(l);
     }
 
-    this.load = function(name) {
-        me.prepLoadingProject(name);
-        me.controller.sendAllToTrash(false, false);
+    this.load = function(db_key) {
+        $.couch.db("turtlejs_projects").openDoc(db_key, {
+            success: function(data) {
+                project = data["project"]
+                project_name = project[0];
+                project_data = project[1];
 
-        jQuery.ajax({
-            url: server + name + ".tb",
-            headers: {
-                'x-api-key': '3tgTzMXbbw6xEKX7'
-            },
-            dataType: 'text'
-        }).done(function(d) {
-            me.controller.loadRawProject(d);
-            me.stop = true;
+                me.prepLoadingProject(me.uniqueName(project_name));
+                me.controller.sendAllToTrash(false, false);
+                me.controller.loadRawProject(project_data);
+                me.stop = true;
+             }
         });
     }
 
@@ -279,7 +278,7 @@ function PlanetView(model, controller) {
             document.querySelector('#loading-image-container')
                 .style.display = '';
 
-            me.model.load(ele.attributes.title.value);
+            me.model.load(ele.attributes.couchkey.value);
             me.controller.hide();
         }
     }

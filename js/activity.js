@@ -1200,6 +1200,7 @@ define(function (require) {
         }
 
         function loadRawProject(data) {
+            console.log(data);
             console.log('loadRawProject ' + data);
             document.body.style.cursor = 'wait';
             allClear();
