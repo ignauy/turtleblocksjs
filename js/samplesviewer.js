@@ -57,13 +57,14 @@ function PlanetModel(controller) {
 
     this.downloadWorldWideProjects = function() {
         me.globalProjects = [];
-        $.couch.db("nickdb").allDocs({
+
+        $.couch.db("turtlejs_projects").allDocs({
             success: function(projects) {
                 projects_id = [];
                 row_keys = {};
                 for (var row_id in projects["rows"]) {
                     row_key = projects["rows"][row_id]["key"];
-                    $.couch.db("nickdb").openDoc(row_key, {
+                    $.couch.db("turtlejs_projects").openDoc(row_key, {
                         success: function(data) {
                             var project = data["project"]
                             project_name = project[0];
@@ -84,7 +85,6 @@ function PlanetModel(controller) {
             }
         });
     }
-                                     
 
     this.redoLocalStorageData = function() {
         this.localProjects = [];
@@ -197,10 +197,16 @@ function PlanetModel(controller) {
     }
 
     this.publish = function(name, data, image) {
-        name = name.replace(/['!"#$%&\\'()\*+,\-\.\/:;<=>?@\[\\\]\^`{|}~']/g,
-            '').replace(/ /g, '_');
-        httpPost(name + '.tb', data);
-        httpPost(name + '.b64', image);
+        var project = {
+            project: [name, data, image]
+        };
+
+        $.couch.db("turtlejs_projects").saveDoc(project, {
+            success: function(status) {
+                console.log(status);
+            }
+        });
+
         me.downloadWorldWideProjects();
     }
 }
