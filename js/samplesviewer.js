@@ -217,7 +217,8 @@ function PlanetModel(controller) {
             Level: [
                 "Professional"
             ],
-            project: [name, data, image]
+            project: [name, data, image],
+            hidden: true
         };
 
         $.couch.db("resources").saveDoc(resource, {
