@@ -220,7 +220,7 @@ function PlanetModel(controller) {
             project: [name, data, image]
         };
 
-        $.couch.db("resources").Doc(resource, {
+        $.couch.db("resources").saveDoc(resource, {
             success: function(status) {
                 console.log(status);
             }
