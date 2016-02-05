@@ -223,10 +223,10 @@ function PlanetModel(controller) {
         $.couch.db("resources").saveDoc(resource, {
             success: function(status) {
                 console.log(status);
+                me.downloadWorldWideProjects();
             }
         });
 
-        me.downloadWorldWideProjects();
     }
 }
 
