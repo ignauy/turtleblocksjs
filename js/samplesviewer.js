@@ -34,7 +34,7 @@ var GLOBAL_PROJECT_TEMPLATE = '\
     </div> \
 </li>';
 
-$.couch.urlPrefix = "http://localhost:5985";
+$.couch.urlPrefix = "http://" + window.location.hostname + ":5985";
 
 function PlanetModel(controller) {
     this.controller = controller;
@@ -58,14 +58,21 @@ function PlanetModel(controller) {
     this.downloadWorldWideProjects = function() {
         me.globalProjects = [];
 
-        $.couch.db("turtlejs_projects").allDocs({
+        $.couch.db("resources").allDocs({
             success: function(projects) {
                 projects_id = [];
                 row_keys = {};
                 for (var row_id in projects["rows"]) {
                     row_key = projects["rows"][row_id]["key"];
-                    $.couch.db("turtlejs_projects").openDoc(row_key, {
+                    $.couch.db("resources").openDoc(row_key, {
                         success: function(data) {
+                            if (!("openWith" in data)) {
+                                return
+                            };
+                            if (data["openWith"] != "turtleblocksjs") {
+                                return
+                            };
+
                             var project = data["project"]
                             project_name = project[0];
                             project_data = project[1];
@@ -181,7 +188,7 @@ function PlanetModel(controller) {
     }
 
     this.load = function(db_key) {
-        $.couch.db("turtlejs_projects").openDoc(db_key, {
+        $.couch.db("resources").openDoc(db_key, {
             success: function(data) {
                 project = data["project"]
                 project_name = project[0];
@@ -196,11 +203,24 @@ function PlanetModel(controller) {
     }
 
     this.publish = function(name, data, image) {
-        var project = {
+        var _id = $.couch.newUUID();
+
+        var resource = {
+            _id: _id,
+            kind: "Resource",
+            title: "TurtleJS Project - '" + name + "'",
+            author: "User",
+            openWith: "turtleblocksjs",
+            subject: [
+                "Technology"
+            ],
+            Level: [
+                "Professional"
+            ],
             project: [name, data, image]
         };
 
-        $.couch.db("turtlejs_projects").saveDoc(project, {
+        $.couch.db("resources").Doc(resource, {
             success: function(status) {
                 console.log(status);
             }
