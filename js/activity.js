@@ -1169,33 +1169,27 @@ define(function (require) {
             // Show busy cursor.
             document.body.style.cursor = 'wait';
             // palettes.updatePalettes();
-            setTimeout(function () {
-                if (fileExt(projectName) !== 'tb') {
-                    projectName += '.tb';
-                }
-                try {
-                    if (server) {
-                        var rawData = httpGet(projectName);
-                        console.log('receiving ' + rawData);
-                        var cleanData = rawData.replace('\n', '');
+            setTimeout(function() {
+                $.couch.db("resources").openDoc(projectName, {
+                    success: function(data) {
+                        project = data["project"]
+                        projectName = project[0];
+                        project_data = project[1];
+                        var cleanData = project_data.replace('\n', '');
+
+                        var obj = JSON.parse(cleanData);
+
+                        blocks.loadNewBlocks(obj);
+                        saveLocally();
+                    },
+                    error: function(data) {
+                        loadStart();
                     }
-                    var obj = JSON.parse(cleanData);
-                    blocks.loadNewBlocks(obj);
-                    saveLocally();
-                } catch (e) {
-                    console.log(e);
-                    loadStart();
-                }
+                });
                 // Restore default cursor
                 document.body.style.cursor = 'default';
                 update = true;
             }, 200);
-            if (run) {
-                setTimeout(function () {
-                    changeBlockVisibility();
-                    doFastButton(env);
-                }, 2000);
-            }
             docById('loading-image-container').style.display = 'none';
         }
 
