@@ -34,7 +34,23 @@ var GLOBAL_PROJECT_TEMPLATE = '\
     </div> \
 </li>';
 
+is_nation = false;
 $.couch.urlPrefix = "http://" + window.location.hostname + ":5985";
+
+$.couch.db("configurations").allDocs({
+    success: function(config) {
+        config_key = config["rows"][0]["key"];
+        $.couch.db("configurations").openDoc(config_key, {
+            success: function(data) {
+                if (data["type"] != "community") { 
+                    is_nation = true;
+                    $.couch.urlPrefix = "http://nation:oleoleole@" + window.location.hostname + ":5985"
+                }
+
+            }
+        })
+    }
+});
 
 function PlanetModel(controller) {
     this.controller = controller;
