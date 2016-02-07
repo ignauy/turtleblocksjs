@@ -8,7 +8,6 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, 51 Franklin Street, Suite 500 Boston, MA 02110-1335 USA
 //
-
 EMPTYIMAGE = 'data:image/svg+xml;base64,' + btoa('<svg \
               xmlns="http://www.w3.org/2000/svg" width="320" height="240" \
               viewBox="0 0 320 240"></svg>')
@@ -106,7 +105,7 @@ function PlanetModel(controller) {
                                 title: project_name,
                                 img: project_img
                             });
-                            
+
                             me.updated();
                         }
                     });
@@ -220,7 +219,7 @@ function PlanetModel(controller) {
                 me.controller.sendAllToTrash(false, false);
                 me.controller.loadRawProject(project_data);
                 me.stop = true;
-             }
+            }
         });
     }
 
@@ -251,7 +250,12 @@ function PlanetModel(controller) {
                 from: "/*",
                 to: '*'
             }],
-            _attachments: { "index.html": { "content_type": "text/html" , "data": redirect } }
+            _attachments: {
+                "index.html": {
+                    "content_type": "text/html",
+                    "data": redirect
+                }
+            }
         };
 
 
