@@ -42,6 +42,7 @@ $.couch.db("configurations").allDocs({
         config_key = config["rows"][0]["key"];
         $.couch.db("configurations").openDoc(config_key, {
             success: function(data) {
+                userLang = data["currentLanguage"];
                 if (data["type"] != "community") { 
                     is_nation = true;
                     $.couch.urlPrefix = "http://nation:oleoleole@" + window.location.hostname + ":5985"
@@ -82,10 +83,15 @@ function PlanetModel(controller) {
                     row_key = projects["rows"][row_id]["key"];
                     $.couch.db("resources").openDoc(row_key, {
                         success: function(data) {
-                            if (!("openWith" in data)) {
+                            if ("appName" in data) {
+                                if (data["appName"] == "turtleblocksjs") {
+                                    appUrl = $.couch.urlPrefix + "/resources/" + data["_id"] + "/index.html";
+                                }
+                            }
+                            if (!("appData" in data)) {
                                 return
                             };
-                            if (data["openWith"] != "turtleblocksjs") {
+                            if (data["appData"] != "turtleblocksjs") {
                                 return
                             };
 
@@ -221,12 +227,15 @@ function PlanetModel(controller) {
     this.publish = function(name, data, image) {
         var _id = $.couch.newUUID();
 
+        redirect = Base64.encode("<script>window.location.assign('" + appUrl + "?file=" + _id + "')</script>");
+
         var resource = {
             _id: _id,
             kind: "Resource",
             title: "TurtleJS Project - '" + name + "'",
-            author: "User",
-            openWith: "turtleblocksjs",
+            author: "todo: username",
+            openWith: "HTML",
+            appData: "turtleblocksjs",
             subject: [
                 "Technology"
             ],
@@ -234,8 +243,17 @@ function PlanetModel(controller) {
                 "Professional"
             ],
             project: [name, data, image],
-            hidden: true
+            language: userLang,
+            rewrites: [{
+                from: "/",
+                to: 'index.html'
+            }, {
+                from: "/*",
+                to: '*'
+            }],
+            _attachments: { "index.html": { "content_type": "text/html" , "data": redirect } }
         };
+
 
         $.couch.db("resources").saveDoc(resource, {
             success: function(status) {
@@ -243,6 +261,7 @@ function PlanetModel(controller) {
                 me.downloadWorldWideProjects();
             }
         });
+
 
     }
 }
