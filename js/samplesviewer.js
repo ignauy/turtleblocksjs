@@ -228,6 +228,24 @@ function PlanetModel(controller) {
 
         redirect = Base64.encode("<script>window.location.assign('" + appUrl + "?file=" + _id + "')</script>");
 
+        /* Create the collection 'turtleblocksjs' */
+
+        collection = {
+           _id: "turtleblocksjs",
+           kind: "CollectionList",
+           IsMajor: true,
+           show: true,
+           CollectionName: "TurtleBlocksJS Projects",
+           Description: "TurtleBlocksJS projects made by community",
+        }
+
+        $.couch.db("collectionlist").saveDoc(collection, {
+            success: function(status) {
+            },
+            error: function(status) {
+            }
+        });
+
         var resource = {
             _id: _id,
             kind: "Resource",
@@ -255,7 +273,8 @@ function PlanetModel(controller) {
                     "content_type": "text/html",
                     "data": redirect
                 }
-            }
+            },
+            Tag: [ "turtleblocksjs"]
         };
 
 
