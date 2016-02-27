@@ -35,7 +35,7 @@ var GLOBAL_PROJECT_TEMPLATE = '\
 </li>';
 
 is_nation = false;
-$.couch.urlPrefix = "http://" + window.location.hostname + ":5985";
+$.couch.urlPrefix = "http://" + window.location.host;
 
 $.couch.db("configurations").allDocs({
     success: function(config) {
@@ -45,7 +45,7 @@ $.couch.db("configurations").allDocs({
                 userLang = data["currentLanguage"];
                 if (data["type"] != "community") { 
                     is_nation = true;
-                    $.couch.urlPrefix = "http://nation:oleoleole@" + window.location.hostname + ":5985"
+                    $.couch.urlPrefix = "http://nation:oleoleole@" + window.location.host
                 }
 
             }
@@ -85,7 +85,7 @@ function PlanetModel(controller) {
                         success: function(data) {
                             if ("appName" in data) {
                                 if (data["appName"] == "turtleblocksjs") {
-                                    appUrl = $.couch.urlPrefix + "/resources/" + data["_id"] + "/index.html";
+                                    appUrl = window.location.href;
                                 }
                             }
                             if (!("appData" in data)) {
